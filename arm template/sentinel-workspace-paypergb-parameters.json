@@ -1,0 +1,18 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "logAnalyticsName": {
+            "value": "sentinel-production-westeurope"
+        },
+        "pricingTier": {
+            "value": "pergb2018"
+        },
+        "enableBehaviorAnalyticsInsights": {
+            "value": true
+        },
+        "enableLogicAppsManagementInsights": {
+            "value": true
+        }
+    }
+}

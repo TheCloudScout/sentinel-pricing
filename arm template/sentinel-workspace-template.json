@@ -1,0 +1,85 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Location for all resources."
+            }
+        },
+        "logAnalyticsName": {
+            "type": "String"
+        },
+        "pricingTier": {
+            "type": "string"
+        },
+        "loganalyticsCapacityReservationLevel": {
+            "type": "int",
+            "defaultValue": 100
+        },
+        "sentinelCapacityReservationLevel": {
+            "type": "int",
+            "defaultValue": 100
+        },
+        "retentionInDays": {
+            "type": "int",
+            "defaultValue": 90,
+            "metadata": {
+                "description": "How many days data should be retained"
+            }
+        }
+    },
+    "variables": {
+        "azureSentinelSolutionName": "[concat('SecurityInsights', '(', parameters('logAnalyticsName'),')')]",
+        "sku": "[if(equals(toLower(parameters('pricingTier')), 'capacityreservation'), json(concat('{\"name\":\"', parameters('pricingTier'), '\",\"capacityReservationLevel\":', parameters('loganalyticsCapacityReservationLevel'), '}')), json(concat('{\"name\":\"', parameters('pricingTier'), '\"}')))]",
+        "sentinelSku": "[if(equals(toLower(parameters('pricingTier')), 'capacityreservation'), json(concat('{\"name\":\"CapacityReservation\",\"capacityReservationLevel\":', parameters('sentinelCapacityReservationLevel'), '}')), json('{\"name\":\"PerGB\"}'))]"
+    },
+    "resources": [
+        {
+            "type": "microsoft.operationalinsights/workspaces",
+            "apiVersion": "2021-06-01",
+            "name": "[parameters('logAnalyticsName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "sku": "[variables('sku')]",
+                "retentionInDays": "[parameters('retentionInDays')]",
+                "workspaceCapping": {
+                    "dailyQuotaGb": -1
+                },
+                "publicNetworkAccessForIngestion": "Enabled",
+                "publicNetworkAccessForQuery": "Enabled"
+            }
+        },
+        {
+            "type": "Microsoft.OperationsManagement/solutions",
+            "apiVersion": "2015-11-01-preview",
+            "name": "[variables('azureSentinelSolutionName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('microsoft.operationalinsights/workspaces', parameters('logAnalyticsName'))]"
+            ],
+            "plan": {
+                "name": "[variables('azureSentinelSolutionName')]",
+                "promotionCode": "",
+                "product": "OMSGallery/SecurityInsights",
+                "publisher": "Microsoft"
+            },
+            "properties": {
+                "workspaceResourceId": "[resourceId('microsoft.operationalinsights/workspaces', parameters('logAnalyticsName'))]",
+                "sku": "[variables('sentinelSku')]"
+            }
+        }
+    ],
+    "outputs": {
+        "resourceId": {
+            "type": "string",
+            "value": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName'))]"
+        },
+        "workspaceId": {
+            "type": "string",
+            "value": "[reference(parameters('logAnalyticsName')).customerId]"
+        }
+    }
+}
