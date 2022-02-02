@@ -1,3 +1,24 @@
+<#
+    Get-AzSentinelPricingRecommendation.ps1
+    
+    V0.1 by Koos Goossens @ Wortell. Last update: Febuary 2nd 2022
+
+    This script will check all Log Analytics workspaces in your environment to see if you're using the most optimal pricing tier.
+    For Microsoft Sentinel there's an extra layer on top of a workspace with its own pricing tier as well. And the thresholds for both
+    of these isn't as straightforward as one might think.
+    I see a lot of workspaces costing more money than they should have. So hopefully this script and its outcome will save you some money.
+
+        - It will first loop through all your subscriptions
+        - Then it will loop through all Log Analytics workspaces and perform a KQL query against it to determine the average daily data ingest based on the last month
+        - It will compare this result with a fixed table of thresholds (set at the beginning of the script) to determine what the optimal pricing tier should be
+        - Lastly, it will check if the Sentinel solution is enabled on the workspace and will repeat the comparison but with a different table with different values this time
+        - All outcomes across all workspaces will be gathered in over overview and will automatically be exported as a CSV in the end
+
+    Please note that the threshold for these pricing tiers are determined based on the actual 'list' prices as of February 2nd 2022 based on the West Europe region.
+    If you're using a different region, and/or are receiving discounts through Microsoft, please update the tables accordingly.
+    To help you with this you can use my Excel calculator sheet provided in this repository as well. Fill in your current prices for each tier, and the Excel sheet will calculate all thresholds.
+
+#>
 clear
 # Reset hash tables and object(s)
 $logAnalyticsPriceTable = @{}
@@ -31,12 +52,12 @@ $sentinelPriceTable = @{
 # KQL query to retrieve an average daily date ingest based on the last 31 days excluding the current day
 $Query = @'
 
-    union *
+    Usage
     | where TimeGenerated > ago(31d) and TimeGenerated < ago(1d)
     // Only look at chargeable Tables
-    | where _IsBillable == True
-    | summarize TotalGBytes =round(sum(_BilledSize/(1024*1024*1024)),2) by bin(TimeGenerated, 1d)
-    | summarize ['GBs/day'] =round(avg(TotalGBytes),2) 
+    | where IsBillable == True
+    | summarize TotalGBytes =round(sum(Quantity/(1024)),2) by bin(TimeGenerated, 1d)
+    | summarize ['GBs/day'] =round(avg(TotalGBytes),2)
 
 '@
 $subscriptions = Get-AzSubscription | Where-Object { $_.State -eq "Enabled" }
@@ -97,7 +118,7 @@ Write-Host "The following (Sentinel) workspace(s) were found" -ForegroundColor G
 Write-Host ""
 $sentinelWorkspaces | Select-Object -Last 20 | Format-Table workspaceName, SubscriptionName, sentinelEnabled, averageDailyIngest, bestLogAnalyticsTier, bestSentinelTier
 If(($sentinelWorkspaces | Measure-Object).Count -gt 20) { Write-Host "More than 20 workspaces found, output is truncated!" -ForegroundColor Red }
-Write-Host ""
 $sentinelWorkspaces | Select-Object workspaceName, SubscriptionName, sentinelEnabled, averageDailyIngest, bestLogAnalyticsTier, bestSentinelTier | Export-Csv sentinel-workspaces-pricing-tier-recommendations.csv
+Write-Host ""
 Write-Host "Output is exported to $(Get-Location | Select-Object -ExpandProperty Path)\sentinel-workspaces-pricing-tier-recommendations.csv" -ForegroundColor Green
 Write-Host ""
