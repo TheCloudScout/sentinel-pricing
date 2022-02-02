@@ -19,7 +19,7 @@
     To help you with this you can use my Excel calculator sheet provided in this repository as well. Fill in your current prices for each tier, and the Excel sheet will calculate all thresholds.
 
 #>
-clear
+Clear-Host
 # Reset hash tables and object(s)
 $logAnalyticsPriceTable = @{}
 $sentinelPriceTable = @{}
