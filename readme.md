@@ -1,5 +1,11 @@
 # Get-AzSentinelPricingRecommendation.ps1
 
+## Medium Article
+
+I wrote an article about this subject on Medium. Check it out for more background information about this repository:
+
+https://medium.com/wortell/optimize-microsoft-sentinel-pricing-ca9901840b75
+
 ## Overview
 
 This script will check all Log Analytics workspaces in your environment to see if you're using the most optimal pricing tier.
