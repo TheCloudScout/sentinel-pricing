@@ -121,12 +121,12 @@ foreach ($subscription in $subscriptions) {
         }
         # Check data beyond free retention
         If ($sentinelEnabled -eq "false") {
-            Write-Host "Querying how much data is saved beyond free retention period (30d) and billed for..." -ForegroundColor Gray
+            Write-Host "Data older than free retention (30d) ?..." -ForegroundColor Gray
             $queryResults = Invoke-AzOperationalInsightsQuery -WorkspaceId $workspace.CustomerId -Query $LogAnalyticsRetentionQuery -Wait 120 | Select-Object Results
             $billedRetentionGB = ($queryResults.Results | Select-Object -ExpandProperty "PayedRetentionGB")
         }
         If ($sentinelEnabled -eq "true") {
-            Write-Host "Querying how much data is saved beyond free retention period (90d) and billed for..." -ForegroundColor Gray
+            Write-Host "Data older than free retention (90d) ?..." -ForegroundColor Gray
             $queryResults = Invoke-AzOperationalInsightsQuery -WorkspaceId $workspace.CustomerId -Query $SentinelRetentionQuery -Wait 120 | Select-Object Results
             $billedRetentionGB = ($queryResults.Results | Select-Object -ExpandProperty "PayedRetentionGB")
         }
