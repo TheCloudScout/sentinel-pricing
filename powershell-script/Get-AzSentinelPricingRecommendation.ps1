@@ -50,7 +50,7 @@ $sentinelPriceTable = @{
     '5000 GB / day' = [int] 3007
 }
 # KQL query to retrieve an average daily date ingest based on the last 31 days excluding the current day
-$Query = @'
+$DailyAvgIngestQuery = @'
 
     Usage
     | where TimeGenerated > ago(31d) and TimeGenerated < ago(1d)
@@ -58,6 +58,26 @@ $Query = @'
     | where IsBillable == True
     | summarize TotalGBytes =round(sum(Quantity/(1024)),2) by bin(TimeGenerated, 1d)
     | summarize ['GBs/day'] =round(avg(TotalGBytes),2)
+
+'@
+$LogAnalyticsRetentionQuery = @'
+
+    Usage
+    // Data older than 30 days is billed for additional retention
+    | where TimeGenerated < ago(30d)
+    // Only look at chargeable Tables
+    | where IsBillable == true
+    | summarize PayedRetentionGB = round(sum(Quantity) / 1024 , 0)
+
+'@
+$SentinelRetentionQuery = @'
+
+    Usage
+    // Data older than 90 days is billed for additional retention
+    | where TimeGenerated < ago(90d)
+    // Only look at chargeable Tables
+    | where IsBillable == true
+    | summarize PayedRetentionGB = round(sum(Quantity) / 1024 , 0)
 
 '@
 $subscriptions = Get-AzSubscription | Where-Object { $_.State -eq "Enabled" }
@@ -72,8 +92,9 @@ foreach ($subscription in $subscriptions) {
     foreach ($workspace in $workspaces) {
         Write-Host ""
         Write-Host "Investigating workspace $($workspace.Name)" -ForegroundColor Green
+        # Query for average daily date ingest
         Write-Host "Querying for average daily data ingest..." -ForegroundColor Gray
-        $queryResults = Invoke-AzOperationalInsightsQuery -WorkspaceId $workspace.CustomerId -Query $Query -Wait 120 | Select-Object Results
+        $queryResults = Invoke-AzOperationalInsightsQuery -WorkspaceId $workspace.CustomerId -Query $DailyAvgIngestQuery -Wait 120 | Select-Object Results
         $avgDailyIngest = ($queryResults.Results | Select-Object -ExpandProperty "GBs/day")
         # In case KQL gave no results, the daily data ingest equals zero
         if($avgDailyIngest -eq "NaN") { 
@@ -98,14 +119,27 @@ foreach ($subscription in $subscriptions) {
             # Next, we want to show only the pricing tier with the highest amount of data/day aplicable
             $sentinelBestRecommendation = $sentinelAllRecommendations | Where-Object { $_.Value -eq (($sentinelAllRecommendations | measure-object -Property Value -maximum).maximum) } | Select-Object -ExpandProperty Name
         }
+        # Check data beyond free retention
+        If ($sentinelEnabled -eq "false") {
+            Write-Host "Querying how much data is saved beyond free retention period (30d) and billed for..." -ForegroundColor Gray
+            $queryResults = Invoke-AzOperationalInsightsQuery -WorkspaceId $workspace.CustomerId -Query $LogAnalyticsRetentionQuery -Wait 120 | Select-Object Results
+            $billedRetentionGB = ($queryResults.Results | Select-Object -ExpandProperty "PayedRetentionGB")
+        }
+        If ($sentinelEnabled -eq "true") {
+            Write-Host "Querying how much data is saved beyond free retention period (90d) and billed for..." -ForegroundColor Gray
+            $queryResults = Invoke-AzOperationalInsightsQuery -WorkspaceId $workspace.CustomerId -Query $SentinelRetentionQuery -Wait 120 | Select-Object Results
+            $billedRetentionGB = ($queryResults.Results | Select-Object -ExpandProperty "PayedRetentionGB")
+        }
         # Construct new hash table with information about this workspace
         $listworkspace = New-Object PSObject -property @{
             workspaceName           = $workspace.Name;
             SubscriptionName        = $subscription.Name;
             sentinelEnabled         = $sentinelEnabled;
+            retentionInDays         = $workspace.retentionInDays;
             averageDailyIngest      = $avgDailyIngest;
             bestLogAnalyticsTier    = $loganalyticsBestRecommendation;
-            bestSentinelTier        = $sentinelBestRecommendation
+            bestSentinelTier        = $sentinelBestRecommendation;
+            billedRetentionGB       = $billedRetentionGB
         }
         # Add hash table to already existing object with all the other workspaces
         $sentinelWorkspaces += $listworkspace
@@ -116,9 +150,9 @@ foreach ($subscription in $subscriptions) {
 Write-Host ""
 Write-Host "The following (Sentinel) workspace(s) were found" -ForegroundColor Green
 Write-Host ""
-$sentinelWorkspaces | Select-Object -Last 20 | Format-Table workspaceName, SubscriptionName, sentinelEnabled, averageDailyIngest, bestLogAnalyticsTier, bestSentinelTier
+$sentinelWorkspaces | Select-Object -Last 20 | Format-Table workspaceName, SubscriptionName, sentinelEnabled, retentionInDays, averageDailyIngest, bestLogAnalyticsTier, bestSentinelTier, billedRetentionGB
 If(($sentinelWorkspaces | Measure-Object).Count -gt 20) { Write-Host "More than 20 workspaces found, output is truncated!" -ForegroundColor Red }
-$sentinelWorkspaces | Select-Object workspaceName, SubscriptionName, sentinelEnabled, averageDailyIngest, bestLogAnalyticsTier, bestSentinelTier | Export-Csv sentinel-workspaces-pricing-tier-recommendations.csv
+$sentinelWorkspaces | Select-Object workspaceName, SubscriptionName, sentinelEnabled, retentionInDays, averageDailyIngest, bestLogAnalyticsTier, bestSentinelTier,billedRetentionGB | Export-Csv sentinel-workspaces-pricing-tier-recommendations.csv
 Write-Host ""
 Write-Host "Output is exported to $(Get-Location | Select-Object -ExpandProperty Path)\sentinel-workspaces-pricing-tier-recommendations.csv" -ForegroundColor Green
 Write-Host ""
