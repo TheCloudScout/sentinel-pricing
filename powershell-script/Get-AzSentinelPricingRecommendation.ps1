@@ -20,6 +20,10 @@
 
 #>
 Clear-Host
+#Optional Subscription Selector
+# $selectedSubscription = @(
+#                'mysubscriptionID' #description
+#                )
 # Reset hash tables and object(s)
 $logAnalyticsPriceTable = @{}
 $sentinelPriceTable = @{}
@@ -81,6 +85,7 @@ $SentinelRetentionQuery = @'
 
 '@
 $subscriptions = Get-AzSubscription | Where-Object { $_.State -eq "Enabled" }
+# $subscriptions = Get-AzSubscription | Where-Object { $_.State -eq "Enabled" } | Where-Object { $_.id -in $selectedSubscription }
 $subscriptionsCount = ($subscriptions | Measure-Object).Count
 $count = 1
 foreach ($subscription in $subscriptions) {
@@ -152,7 +157,7 @@ Write-Host "The following (Sentinel) workspace(s) were found" -ForegroundColor G
 Write-Host ""
 $sentinelWorkspaces | Select-Object -Last 20 | Format-Table workspaceName, SubscriptionName, sentinelEnabled, retentionInDays, averageDailyIngest, bestLogAnalyticsTier, bestSentinelTier, billedRetentionGB
 If(($sentinelWorkspaces | Measure-Object).Count -gt 20) { Write-Host "More than 20 workspaces found, output is truncated!" -ForegroundColor Red }
-$sentinelWorkspaces | Select-Object workspaceName, SubscriptionName, sentinelEnabled, retentionInDays, averageDailyIngest, bestLogAnalyticsTier, bestSentinelTier,billedRetentionGB | Export-Csv sentinel-workspaces-pricing-tier-recommendations.csv
+$sentinelWorkspaces | Select-Object workspaceName, SubscriptionName, sentinelEnabled, retentionInDays, averageDailyIngest, bestLogAnalyticsTier, bestSentinelTier,billedRetentionGB | Export-Csv sentinel-workspaces-pricing-tier-recommendations.csv -NoTypeInformation -Delimiter ","
 Write-Host ""
 Write-Host "Output is exported to $(Get-Location | Select-Object -ExpandProperty Path)\sentinel-workspaces-pricing-tier-recommendations.csv" -ForegroundColor Green
 Write-Host ""
