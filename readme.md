@@ -31,3 +31,8 @@ To help you with this you can use my Excel calculator sheet provided in this rep
 
 ![](images/excel-calculator.png)
 > Example of Excel sheet which can help you determine your optimal pricing tier thresholds
+
+## Prerequisites
+Ensure that the following Powershell modules are installed
+- Az
+- Az.MonitoringSolutions
