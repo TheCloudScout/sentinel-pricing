@@ -22,8 +22,8 @@
 Clear-Host
 #Optional Subscription Selector
 # $selectedSubscription = @(
-#                'mysubscriptionID' #description
-#                )
+#     '6c74142b-dfde-46b7-accf-b097b85fe8b0' #sub-gsotech-prd-isosecurity-01
+# )
 # Reset hash tables and object(s)
 $logAnalyticsPriceTable = @{}
 $sentinelPriceTable = @{}
