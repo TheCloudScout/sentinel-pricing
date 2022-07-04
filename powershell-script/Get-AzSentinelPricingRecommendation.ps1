@@ -33,25 +33,25 @@ $sentinelWorkspaces = @()
 $logAnalyticsPriceTable = @{
     'Pay per GB'    = [int]    0;
     '100 GB / day'  = [int]   85; 
-    '200 GB / day'  = [int]  174;
-    '300 GB / day'  = [int]  274;
-    '400 GB / day'  = [int]  371;
-    '500 GB / day'  = [int]  469;
-    '1000 GB / day' = [int]  860;
-    '2000 GB / day' = [int] 1699;
-    '5000 GB / day' = [int] 4041
+    '200 GB / day'  = [int]  193;
+    '300 GB / day'  = [int]  293;
+    '400 GB / day'  = [int]  391;
+    '500 GB / day'  = [int]  491;
+    '1000 GB / day' = [int]  983;
+    '2000 GB / day' = [int] 1953;
+    '5000 GB / day' = [int] 4849
 }
 # Bases on prices for West Europe region https://azure.microsoft.com/en-us/pricing/details/microsoft-sentinel/
 $sentinelPriceTable = @{
     'Pay per GB'    = [int]    0;
     '100 GB / day'  = [int]   50; 
-    '200 GB / day'  = [int]  140;
-    '300 GB / day'  = [int]  240;
-    '400 GB / day'  = [int]  336;
-    '500 GB / day'  = [int]  433;
-    '1000 GB / day' = [int]  689;
-    '2000 GB / day' = [int] 1349;
-    '5000 GB / day' = [int] 3007
+    '200 GB / day'  = [int]  179;
+    '300 GB / day'  = [int]  290;
+    '400 GB / day'  = [int]  384;
+    '500 GB / day'  = [int]  480;
+    '1000 GB / day' = [int]  974;
+    '2000 GB / day' = [int] 1897;
+    '5000 GB / day' = [int] 4730
 }
 # KQL query to retrieve an average daily date ingest based on the last 31 days excluding the current day
 $DailyAvgIngestQuery = @'
