@@ -29,6 +29,20 @@ param (
 
 Clear-Host
 
+Write-Host ""
+Write-Host "                                                               _____" -ForegroundColor DarkCyan
+Write-Host "                                                            .-'     `-." -ForegroundColor DarkCyan
+Write-Host "                                                          .'  .-"""-.-"'" -ForegroundColor DarkCyan
+Write-Host " ██████╗ ██████╗ ████████╗██╗███╗   ███╗██╗███████╗      /  .'     ██████╗ " -ForegroundColor DarkCyan
+Write-Host "██╔═══██╗██╔══██╗╚══██╔══╝██║████╗ ████║██║╚══███╔╝  .--' '-------.██╔══██╗" -ForegroundColor DarkCyan
+Write-Host "██║   ██║██████╔╝   ██║   ██║██╔████╔██║██║  ███╔╝   """"""":  :"""""""""""  ██████╔╝" -ForegroundColor DarkCyan
+Write-Host "██║   ██║██╔═══╝    ██║   ██║██║╚██╔╝██║██║ ███╔╝  .----'  '----.  ██╔══██╗" -ForegroundColor DarkCyan
+Write-Host "╚██████╔╝██║        ██║   ██║██║ ╚═╝ ██║██║███████╗ """""""\  \"""""""""    ██║  ██║" -ForegroundColor DarkCyan
+Write-Host " ╚═════╝ ╚═╝        ╚═╝   ╚═╝╚═╝     ╚═╝╚═╝╚══════╝      \  '.     ╚═╝  ╚═╝" -ForegroundColor DarkCyan
+Write-Host "                                                          '.  '-----." -ForegroundColor DarkCyan
+Write-Host "                                                            '-.____.'" -ForegroundColor DarkCyan
+Write-Host ""
+
 # Make sure any modules we depend on are installed
 
     $modulesToInstall = @(
