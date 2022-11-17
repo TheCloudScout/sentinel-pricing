@@ -64,6 +64,7 @@ if ($updateArmParameters) {
             $parametersFilePath = Read-Host "Please provider proper file path"
             if (!(Test-Path $parametersFilePath)) {
                 Write-Host "Path provided is still invalid! Exiting script..." -ForegroundColor Red
+                Write-Host ""
                 Exit
             }
             else {
