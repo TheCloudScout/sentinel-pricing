@@ -1,0 +1,60 @@
+name: SentinelPricingTierAutoScale
+on:
+  schedule:
+    - cron:  '0 1 8 * *'    # At 08:00 on every 1st day of the month
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  ubuntu-latest:
+      runs-on: ubuntu-latest
+      environment: < Github environment > # Setup in Github --> Settings --> Environments
+      steps:
+
+        - name: Login to Azure Cloud
+          uses: azure/login@v1
+          with:
+            client-id: ${{ secrets.CLIENTID }}              # Configure these secrets in Github --> Settings --> Environments --> Environment secrets
+            tenant-id: ${{ secrets.TENANTID }}              # Configure these secrets in Github --> Settings --> Environments --> Environment secrets
+            subscription-id: ${{ secrets.SUBSCRIPTIONID }}  # Configure these secrets in Github --> Settings --> Environments --> Environment secrets
+            enable-AzPSSession: true
+
+        - name: Check out repository code
+          uses: actions/checkout@v3
+          with:  
+            fetch-depth: 100
+
+        - name: Check optimal Log analytics and Sentinel pricing tiers
+          id: check-sentinel-pricing
+          shell: pwsh 
+          run: ./powershell-script/Get-AzSentinelPricingRecommendation.ps1 -subscriptionId ${{ secrets.SUBSCRIPTIONID }} -updateArmParameters $true -parametersFilePath "arm-templates/"
+
+        - name: Get current date
+          id: date
+          shell: pwsh 
+          run: |
+            $date = Get-Date -Format dd-MM-yyyy
+            "date=$date" >> $env:GITHUB_OUTPUT
+
+        - name: Push changed parameters file(s)
+          shell: pwsh
+          run: |
+            Write-Output 'Variable $fileChanges : ${{ steps.check-sentinel-pricing.outputs.fileChanges }}'
+            Write-Output 'Variable $filePath    : ${{ steps.check-sentinel-pricing.outputs.filePath }}'
+            git config --global user.email "user@domain.com"
+            git config --global user.name "username"
+            git checkout -b update/pricing-tier-${{ steps.date.outputs.date }}-${{github.run_number}}
+            git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+            git commit --all --message "New optimal pricing tier ${{ steps.date.outputs.date }}"
+            git push --set-upstream origin update/pricing-tier-${{ steps.date.outputs.date }}-${{github.run_number}}
+
+        - name: Create pull request
+          uses: devops-infra/action-pull-request@v0.5.3
+          with:
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+            source_branch: update/pricing-tier-${{ steps.date.outputs.date }}-${{github.run_number}}
+            target_branch: master
+            template: .github/PULL_REQUEST_TEMPLATE_PRICING_TIER.md
