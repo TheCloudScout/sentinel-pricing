@@ -1,0 +1,294 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    },
+    "logAnalyticsName": {
+      "type": "String"
+    },
+    "pricingTierLogAnalytics": {
+      "type": "string",
+      "defaultValue": "PerGB2018",
+      "allowedValues": [
+        "CapacityReservation",
+        "PerGB2018",
+        "Free",
+        "Standalone",
+        "Standard",
+        "Premium",
+        "PerNode",
+        "LACluster"
+      ],
+      "metadata": {
+        "description": "Specifies the service tier of the workspace: CapacityReservation, Standalone, PerNode, Free, Pay-as-you-go."
+      }
+    },
+    "pricingTierSentinel": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable custom pricing tier for Sentinel, default false."
+      }
+    },
+    "capacityReservationLevelLogAnalytics": {
+      "type": "int",
+      "defaultValue": 100,
+      "allowedValues": [
+        100,
+        200,
+        300,
+        400,
+        500,
+        1000,
+        2000,
+        5000
+      ],
+      "metadata": {
+        "description": "Capacity reservation level which is used together with pricingTier capacityreservation for Log Analytics."
+      }
+    },
+    "capacityReservationLevelSentinel": {
+      "type": "int",
+      "defaultValue": 100,
+      "allowedValues": [
+        100,
+        200,
+        300,
+        400,
+        500,
+        1000,
+        2000,
+        5000
+      ],
+      "metadata": {
+        "description": "Capacity reservation level which is used together with pricingTier capacityreservation for Sentinel."
+      }
+    },
+    "retentionInDays": {
+      "type": "int",
+      "defaultValue": 90,
+      "metadata": {
+        "description": "How many days data should be retained"
+      }
+    },
+    "enableBehaviorAnalyticsInsights": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Option to enable the Microsoft Behavior Analytics Insights Solution."
+      }
+    },
+    "enableLogicAppsManagementInsights": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Option to enable the Logic Apps Management Insights Solution"
+      }
+    },
+    "enableDnsAnalytics": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Option to enable the Microsoft DNS Analytics Solution."
+      }
+    },
+    "enableContainerInsights": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Option to enable the Microsoft Container Insights Solution."
+      }
+    },
+    "enableVMInsights": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Option to enable the Microsoft VM Insights Solution."
+      }
+    },
+    "enableWindowsFirewall": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Option to enable the Microsoft Windows Firewall Solution."
+      }
+    }
+  },
+  "variables": {
+    "azureSentinelSolutionName": "[concat('SecurityInsights', '(', parameters('logAnalyticsName'),')')]",
+    "sku": "[if(equals(toLower(parameters('pricingTierLogAnalytics')), 'capacityreservation'), json(concat('{\"name\":\"', parameters('pricingTierLogAnalytics'), '\",\"capacityReservationLevel\":', parameters('capacityReservationLevelLogAnalytics'), '}')), json(concat('{\"name\":\"', parameters('pricingTierLogAnalytics'), '\"}')))]",
+    "sentinelSku": "[if(parameters('pricingTierSentinel'), json(concat('{\"name\":\"CapacityReservation\",\"capacityReservationLevel\":', parameters('capacityReservationLevelSentinel'), '}')), json('{\"name\":\"PerGB\"}'))]",
+    "dnsAnalyticsSolutionName": "[concat('DnsAnalytics', '(', parameters('logAnalyticsName'), ')')]",
+    "containerInsightsSolutionName": "[concat('ContainerInsights', '(', parameters('logAnalyticsName'), ')')]",
+    "behaviorAnalyticsInsightsSolutionName": "[concat('BehaviorAnalyticsInsights', '(', parameters('logAnalyticsName'), ')')]",
+    "vmInsightsSolutionName": "[concat('VMInsights', '(', parameters('logAnalyticsName'), ')')]",
+    "windowsFirewallSolutionName": "[concat('WindowsFirewall', '(', parameters('logAnalyticsName'), ')')]",
+    "logicAppsManagementInsightsSolutionName": "[concat('LogicAppsManagement', '(', parameters('logAnalyticsName'), ')')]"
+  },
+  "resources": [
+    {
+      "type": "microsoft.operationalinsights/workspaces",
+      "apiVersion": "2021-06-01",
+      "name": "[parameters('logAnalyticsName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": "[variables('sku')]",
+        "retentionInDays": "[parameters('retentionInDays')]",
+        "workspaceCapping": {
+          "dailyQuotaGb": -1
+        },
+        "publicNetworkAccessForIngestion": "Enabled",
+        "publicNetworkAccessForQuery": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.OperationsManagement/solutions",
+      "apiVersion": "2015-11-01-preview",
+      "name": "[variables('azureSentinelSolutionName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('microsoft.operationalinsights/workspaces', parameters('logAnalyticsName'))]"
+      ],
+      "plan": {
+        "name": "[variables('azureSentinelSolutionName')]",
+        "promotionCode": "",
+        "product": "OMSGallery/SecurityInsights",
+        "publisher": "Microsoft"
+      },
+      "properties": {
+        "workspaceResourceId": "[resourceId('microsoft.operationalinsights/workspaces', parameters('logAnalyticsName'))]",
+        "sku": "[variables('sentinelSku')]"
+      }
+    },
+    {
+      "condition": "[parameters('enableBehaviorAnalyticsInsights')]",
+      "type": "Microsoft.OperationsManagement/solutions",
+      "apiVersion": "2015-11-01-preview",
+      "name": "[variables('behaviorAnalyticsInsightsSolutionName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsName'))]"
+      ],
+      "plan": {
+        "name": "[variables('behaviorAnalyticsInsightsSolutionName')]",
+        "promotionCode": "",
+        "product": "OMSGallery/BehaviorAnalyticsInsights",
+        "publisher": "Microsoft"
+      },
+      "properties": {
+        "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsName'))]"
+      }
+    },
+    {
+      "condition": "[parameters('enableLogicAppsManagementInsights')]",
+      "type": "Microsoft.OperationsManagement/solutions",
+      "apiVersion": "2015-11-01-preview",
+      "name": "[variables('logicAppsManagementInsightsSolutionName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsName'))]"
+      ],
+      "plan": {
+        "name": "[variables('logicAppsManagementInsightsSolutionName')]",
+        "promotionCode": "",
+        "product": "OMSGallery/LogicAppsManagement",
+        "publisher": "Microsoft"
+      },
+      "properties": {
+        "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsName'))]"
+      }
+    },
+    {
+      "condition": "[parameters('enableDnsAnalytics')]",
+      "type": "Microsoft.OperationsManagement/solutions",
+      "apiVersion": "2015-11-01-preview",
+      "name": "[variables('dnsAnalyticsSolutionName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsName'))]"
+      ],
+      "plan": {
+        "name": "[variables('dnsAnalyticsSolutionName')]",
+        "promotionCode": "",
+        "product": "OMSGallery/DnsAnalytics",
+        "publisher": "Microsoft"
+      },
+      "properties": {
+        "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsName'))]"
+      }
+    },
+    {
+      "condition": "[parameters('enableContainerInsights')]",
+      "type": "Microsoft.OperationsManagement/solutions",
+      "apiVersion": "2015-11-01-preview",
+      "name": "[variables('containerInsightsSolutionName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsName'))]"
+      ],
+      "plan": {
+        "name": "[variables('containerInsightsSolutionName')]",
+        "promotionCode": "",
+        "product": "OMSGallery/ContainerInsights",
+        "publisher": "Microsoft"
+      },
+      "properties": {
+        "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsName'))]"
+      }
+    },
+    {
+      "condition": "[parameters('enableVMInsights')]",
+      "type": "Microsoft.OperationsManagement/solutions",
+      "apiVersion": "2015-11-01-preview",
+      "name": "[variables('vmInsightsSolutionName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsName'))]"
+      ],
+      "plan": {
+        "name": "[variables('vmInsightsSolutionName')]",
+        "promotionCode": "",
+        "product": "OMSGallery/VMInsights",
+        "publisher": "Microsoft"
+      },
+      "properties": {
+        "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsName'))]"
+      }
+    },
+    {
+      "condition": "[parameters('enableWindowsFirewall')]",
+      "type": "Microsoft.OperationsManagement/solutions",
+      "apiVersion": "2015-11-01-preview",
+      "name": "[variables('windowsFirewallSolutionName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsName'))]"
+      ],
+      "plan": {
+        "name": "[variables('windowsFirewallSolutionName')]",
+        "promotionCode": "",
+        "product": "OMSGallery/WindowsFirewall",
+        "publisher": "Microsoft"
+      },
+      "properties": {
+        "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsName'))]"
+      }
+    }
+  ],
+  "outputs": {
+    "resourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName'))]"
+    },
+    "workspaceId": {
+      "type": "string",
+      "value": "[reference(parameters('logAnalyticsName')).customerId]"
+    }
+  }
+}
