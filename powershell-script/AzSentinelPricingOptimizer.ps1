@@ -28,7 +28,7 @@ param (
     [String] $subscriptionId = "",
 
     [Parameter (Mandatory = $false)]
-    [String] $updateArmParameters = $true,
+    [String] $updateArmParameters = $false,
 
     [Parameter (Mandatory = $false)]
     [String] $parametersFilePath = ""
@@ -53,15 +53,26 @@ Write-Host "                 WORTELL #enterprisesecurity" -ForegroundColor Green
 Write-Host ""
 
 # Check if Arm template parameters file path is correctly passed as parameter, otherwise ask for it
-if (($updateArmParameters) -and (!$parametersFilePath)) {
-    Write-Host "No Arm template parameters file path provided!" -ForegroundColor Red
-    $parametersFilePath = Read-Host "Please provider proper file path"
-    if (!(Test-Path $parametersFilePath)) {
-        Write-Host "Path provided is invalid!" -ForegroundColor Red
-        Exit
+
+if ($updateArmParameters) {
+    if($parametersFilePath -eq "") {
+        Write-Host "No Arm template parameters file path provided!" -ForegroundColor Red
+        $parametersFilePath = Read-Host "Please provider proper file path"
     } else {
-        Write-Host "Path appeared to be valid, continueing script..." -ForegroundColor Green
-        Write-Host ""
+        if (!(Test-Path $parametersFilePath)) {
+            Write-Host "Path provided is invalid!" -ForegroundColor Red
+            $parametersFilePath = Read-Host "Please provider proper file path"
+            if (!(Test-Path $parametersFilePath)) {
+                Write-Host "Path provided is still invalid! Exiting script..." -ForegroundColor Red
+                Exit
+            }
+            else {
+                Write-Host "Path appeared to be valid, continueing script..." -ForegroundColor Green
+                Write-Host ""
+            }
+        } else {
+            Continue
+        }
     }
 }
 
