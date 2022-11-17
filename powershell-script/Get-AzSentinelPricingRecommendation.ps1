@@ -23,25 +23,47 @@
 
 [CmdletBinding()]
 param (
-    [Parameter (Mandatory = $true)]
-    [String] $subscriptionId
+
+    [Parameter (Mandatory = $false)]
+    [String] $subscriptionId = "",
+
+    [Parameter (Mandatory = $false)]
+    [String] $updateArmParameters = $true,
+
+    [Parameter (Mandatory = $false)]
+    [String] $parametersFilePath = ""
+
 )
 
 Clear-Host
 
 Write-Host ""
-Write-Host "                                                               _____" -ForegroundColor DarkCyan
-Write-Host "                                                            .-'     `-." -ForegroundColor DarkCyan
-Write-Host "                                                          .'  .-"""-.-"'" -ForegroundColor DarkCyan
-Write-Host " ██████╗ ██████╗ ████████╗██╗███╗   ███╗██╗███████╗      /  .'     ██████╗ " -ForegroundColor DarkCyan
-Write-Host "██╔═══██╗██╔══██╗╚══██╔══╝██║████╗ ████║██║╚══███╔╝  .--' '-------.██╔══██╗" -ForegroundColor DarkCyan
-Write-Host "██║   ██║██████╔╝   ██║   ██║██╔████╔██║██║  ███╔╝   """"""":  :"""""""""""  ██████╔╝" -ForegroundColor DarkCyan
-Write-Host "██║   ██║██╔═══╝    ██║   ██║██║╚██╔╝██║██║ ███╔╝  .----'  '----.  ██╔══██╗" -ForegroundColor DarkCyan
-Write-Host "╚██████╔╝██║        ██║   ██║██║ ╚═╝ ██║██║███████╗ """""""\  \"""""""""    ██║  ██║" -ForegroundColor DarkCyan
-Write-Host " ╚═════╝ ╚═╝        ╚═╝   ╚═╝╚═╝     ╚═╝╚═╝╚══════╝      \  '.     ╚═╝  ╚═╝" -ForegroundColor DarkCyan
-Write-Host "                                                          '.  '-----." -ForegroundColor DarkCyan
-Write-Host "                                                            '-.____.'" -ForegroundColor DarkCyan
+Write-Host " MICROSOFT                                                    _____" -ForegroundColor DarkCyan
+Write-Host " S E N T I N E L                                           .-'     `-." -ForegroundColor DarkCyan
+Write-Host "                                                         .'  .-"""-.-"'" -ForegroundColor DarkCyan
+Write-Host " ██████╗ ██████╗ ████████╗██╗███╗   ███╗██╗███████╗     /  .'     ██████╗ " -ForegroundColor DarkCyan
+Write-Host "██╔═══██╗██╔══██╗╚══██╔══╝██║████╗ ████║██║╚══███╔╝ .--' '-------.██╔══██╗" -ForegroundColor DarkCyan
+Write-Host "██║   ██║██████╔╝   ██║   ██║██╔████╔██║██║  ███╔╝  """"""":  :"""""""""""  ██████╔╝" -ForegroundColor DarkCyan
+Write-Host "██║   ██║██╔═══╝    ██║   ██║██║╚██╔╝██║██║ ███╔╝ .----'  '----.  ██╔══██╗" -ForegroundColor DarkCyan
+Write-Host "╚██████╔╝██║        ██║   ██║██║ ╚═╝ ██║██║███████╗"""""""\  \"""""""""    ██║  ██║" -ForegroundColor DarkCyan
+Write-Host " ╚═════╝ ╚═╝        ╚═╝   ╚═╝╚═╝     ╚═╝╚═╝╚══════╝     \  '.     ╚═╝  ╚═╝" -ForegroundColor DarkCyan
+Write-Host "                                                         '.  '-----." -ForegroundColor DarkCyan
+Write-Host "                                                           '-.____.'" -ForegroundColor DarkCyan
+Write-Host "                 WORTELL #enterprisesecurity" -ForegroundColor Green
 Write-Host ""
+
+# Check if Arm template parameters file path is correctly passed as parameter, otherwise ask for it
+if (($updateArmParameters) -and (!$parametersFilePath)) {
+    Write-Host "No Arm template parameters file path provided!" -ForegroundColor Red
+    $parametersFilePath = Read-Host "Please provider proper file path"
+    if (!(Test-Path $parametersFilePath)) {
+        Write-Host "Path provided is invalid!" -ForegroundColor Red
+        Exit
+    } else {
+        Write-Host "Path appeared to be valid, continueing script..." -ForegroundColor Green
+        Write-Host ""
+    }
+}
 
 # Make sure any modules we depend on are installed
 
@@ -70,6 +92,7 @@ Write-Host ""
     $listworkspace = @{}
     $sentinelWorkspaces = @()
     $changeRequired = $false
+    $count = [int]1
 
 # Based on prices for West Europe region https://azure.microsoft.com/en-us/pricing/details/monitor/
 
@@ -128,187 +151,231 @@ $SentinelRetentionQuery = @'
     | summarize PayedRetentionGB = round(sum(Quantity) / 1024 , 0)
 '@
 
-$subscription = get-azsubscription -SubscriptionId $subscriptionId
+if(!$subscriptionId){
+    $subscriptions = Get-AzSubscription    
+} else {
+    $subscriptions = Get-AzSubscription -SubscriptionId $subscriptionId
+}
 
-Write-Host ""
-Write-Host "Selecting Azure subscripton $($subscriptionId)" -ForegroundColor DarkCyan
-Write-Host ""
-Select-AzSubscription -subscriptionId $subscriptionId | Out-Null
+foreach($subscription in $subscriptions) {
 
-# Get all log analytics workspaces but excluded those from Defender for Cloud
-$workspaces = Get-AzOperationalInsightsWorkspace | Where-Object { $_.Name -notlike "DefaultWorkspace-*" }
+    $subscriptionId = $subscription.SubscriptionId
 
-foreach ($workspace in $workspaces) {
+    Write-Host ""
+    Write-Host "[$($count)/$($subscriptions.Count)] Selecting Azure subscripton '$($subscription.Name)'" -ForegroundColor DarkCyan
+    Select-AzSubscription -subscriptionId $subscriptionId | Out-Null
+
+    # Get all log analytics workspaces but excluded those from Defender for Cloud
+    $workspaces = Get-AzOperationalInsightsWorkspace | Where-Object { $_.Name -notlike "DefaultWorkspace-*" }
+
+    if(!$workspaces) {
+        Write-Host "  ✘ No workspaces found in this subscription" -ForegroundColor DarkGray
+    } else {
     
-    Write-Host "┏━━━" -ForegroundColor Yellow
-    Write-Host "┃ Investigating workspace $($workspace.Name)" -ForegroundColor Yellow
-    Write-Host "┗━━━" -ForegroundColor Yellow
-    $changeRequired = $false
-
-    # Retrieve current Log Analytics Sku
-    if ($workspace.Sku -eq "PerGB2018") {
-        $currentSku = "PerGB2018"
-    } else {
-        $currentSku = $workspace.CapacityReservationLevel
-    }
-
-    # Query for average daily date ingest
-    Write-Host "  ┖─ Querying for average daily data ingest..." -ForegroundColor Gray
-    $queryResults = Invoke-AzOperationalInsightsQuery -WorkspaceId $workspace.CustomerId -Query $DailyAvgIngestQuery -Wait 120 | Select-Object Results
-    $avgDailyIngest = ($queryResults.Results | Select-Object -ExpandProperty "GBs/day")
-    if ($avgDailyIngest -eq "NaN") {    # In case KQL gave no results, the daily data ingest = zero
-        $avgDailyIngest = 0
-    }
-    
-    # Compare the daily data ingest with the values of the pricing hash table defined above
-    $loganalyticsAllRecommendations = $logAnalyticsPriceTable.GetEnumerator() | Where-Object { $_.Value -le $avgDailyIngest }
-    
-    # Next, we want to show only the pricing tier with the highest amount of data/day aplicable
-    $getSku = $loganalyticsAllRecommendations | Where-Object { $_.Value -eq (($loganalyticsAllRecommendations | measure-object -Property Value -maximum).maximum) } | Select-Object -ExpandProperty Name
-    if ($getSku -eq 'PerGB2018') {      # Check if Sku = string
-        $optimalSku = $getSku
-    } else {
-        $optimalSku = [int]$getSku      # Otherwise it's an integer
-    }
-    
-    # Check is Sentinel solution is enabled on the log analytics workspace
-    Write-Host "  ┖─ Check if workspace is Sentinel enabled..." -ForegroundColor Gray
-    $checkSentinelEnabled = Get-AzMonitorLogAnalyticsSolution | Where-Object { $_.Name -eq "SecurityInsights($($workspace.Name))" }
-    Write-Host "  ┖─ Gathering Log Analytics pricing tier recommendations..." -ForegroundColor Gray
-    If (($checkSentinelEnabled | Measure-Object).Count -eq 0) {
-        $sentinelEnabled = $false
-        # Then also no Sentinel pricing tier is aplicable
-        $optimalSentinelSku = "N/A"
-        $currentSentinelSku = "N/A"
-    } else {
-        $sentinelEnabled = $true
-        # Retrieve current Sentinel SKU
-        $context = Get-AzContext
-        $profileClient = [Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient]::new([Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile)
-        $token = $profileClient.AcquireAccessToken($context.Subscription.TenantId)
-        $headers = @{
-            "Authorization" = "Bearer $($token.AccessToken)"
-            "Content-Type"  = "application/json"
-        }
-        Write-Host "  ┖─ Retrieve Sentinal SKU..." -ForegroundColor Gray
-        $params = @{
-            "Method"  = "Get"
-            "Uri"     = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$($workspace.ResourceGroupName)/providers/Microsoft.OperationsManagement/solutions/SecurityInsights($($workspace.Name))?api-version=2015-11-01-preview"
-            "Headers" = $headers
-        }
-        $sentinelProperties = Invoke-RestMethod @params -UseBasicParsing
-        if ($sentinelProperties.properties.sku.name -eq "perGB") {
-            $currentSentinelSku = "perGB"
-        } else {
-            $currentSentinelSku = [int]$sentinelProperties.properties.sku.capacityReservationLevel
-        }
-        Write-Host "  ┖─ Gathering Sentinel pricing tier recommendations..." -ForegroundColor Gray
-        # Compare the daily data ingest with the values of the pricing hash table defined above
-        $sentinelAllRecommendations = $sentinelPriceTable.GetEnumerator() | Where-Object { $_.Value -le $avgDailyIngest }
-        # Next, we want to show only the pricing tier with the highest amount of data/day aplicable
-        $getSentinelSku = $sentinelAllRecommendations | Where-Object { $_.Value -eq (($sentinelAllRecommendations | measure-object -Property Value -maximum).maximum) } | Select-Object -ExpandProperty Name
-        if ($getSentinelSku -eq 'perGB') {
-            # Check if Sku = string
-            $optimalSentinelSku = $getSentinelSku
-        } else {
-            $optimalSentinelSku = [int]$getSentinelSku      # Otherwise it's an integer
-        }
-    }
-
-    # Check data beyond free retention
-    Write-Host "  ┖─ Checking data retention ..." -ForegroundColor Gray
-    If ($sentinelEnabled -eq $false) {
-        Write-Host "     Data older than free retention (30d) ?..." -ForegroundColor DarkGray
-        $queryResults = Invoke-AzOperationalInsightsQuery -WorkspaceId $workspace.CustomerId -Query $LogAnalyticsRetentionQuery -Wait 120 | Select-Object Results
-        $billedRetentionGB = ($queryResults.Results | Select-Object -ExpandProperty "PayedRetentionGB")
-    }
-    If ($sentinelEnabled -eq $true) {
-        Write-Host "     Data older than free retention (90d) ?..." -ForegroundColor DarkGray
-        $queryResults = Invoke-AzOperationalInsightsQuery -WorkspaceId $workspace.CustomerId -Query $SentinelRetentionQuery -Wait 120 | Select-Object Results
-        $billedRetentionGB = ($queryResults.Results | Select-Object -ExpandProperty "PayedRetentionGB")
-    }
-    # Construct new hash table with information about this workspace
-    $listworkspace = New-Object PSObject -property @{
-        workspaceName        = $workspace.Name;
-        SubscriptionName     = $subscription.Name;
-        sentinelEnabled      = $sentinelEnabled;
-        retentionInDays      = $workspace.retentionInDays;
-        averageDailyIngest   = $avgDailyIngest;
-        currentSku           = $currentSku;
-        optimalSku           = $optimalSku;
-        currentSentinelSku   = $currentSentinelSku;
-        optimalSentinelSku   = $optimalSentinelSku;
-        billedRetentionGB    = $billedRetentionGB
-    }
-    # Add hash table to already existing object with all the other workspaces
-    $sentinelWorkspaces += $listworkspace
-
-    # Compare Current Sku's with optimal Sku's
-    Write-Host "  ┖─ Checking if Sku's needs changing..." -ForegroundColor Gray
-    if ($currentSku.Equals($optimalSku)) {
-        Write-Host "     ✓ Log Analytics Sku is currently running optimal Sku" -ForegroundColor Green
-    } else {
-        Write-Host "     ! Log Analytics Sku needs to be changed from $($currentSku) to $($optimalSku)" -ForegroundColor DarkYellow
-        $changeRequired = $true
-    }
-    if ($currentSentinelSku.Equals($optimalSentinelSku)) {
-        Write-Host "     ✓ Microsoft Sentinel Sku is currently running optimal Sku" -ForegroundColor Green
-    } else {
-        Write-Host "     ! Microsoft Sentinel Sku needs to be changed from $($currentSentinelSku) to $($optimalSentinelSku)" -ForegroundColor DarkYellow
-        $changeRequired = $true
-    }
-
-    # Make adjustments to ARM template parameters file
-    if ($changeRequired) {
-        # Read ARM template parameters file
-        $parametersFile = (Get-ChildItem "parameters" | where-object name -match $listworkspace.workspaceName).Name
-        $parametersFileContents = get-content "parameters/$($parametersFile)" | ConvertFrom-Json
-
-        # Change Log Analytics parameters values to match optimal Sku
-        If($optimalSku -eq "PerGB2018") {
-            $parametersFileContents.parameters.pricingTierLogAnalytics.value                = "PerGB2018"
-            $parametersFileContents.parameters.capacityReservationLevelLogAnalytics.value   = 100
-        } else {
-            $parametersFileContents.parameters.pricingTierLogAnalytics.value                = "CapacityReservation"
-            $parametersFileContents.parameters.capacityReservationLevelLogAnalytics.value   = $optimalSku
-        }
-
-        # Change Sentinel parameters values to match optimal Sku
-        If($optimalSentinelSku -eq "perGB") {
-            $parametersFileContents.parameters.pricingTierSentinel.value                    = $false
-            $parametersFileContents.parameters.capacityReservationLevelSentinel.value       = 100
-        } else {
-            $parametersFileContents.parameters.pricingTierSentinel.value                    = $true
-            $parametersFileContents.parameters.capacityReservationLevelSentinel.value       = $optimalSentinelSku
-        }
+        foreach ($workspace in $workspaces) {
         
-        # Write changes to ARM template parameters file
-        Write-Host "  ┖─ Writing ARM template parameters file to disk..." -ForegroundColor Gray
-        $parametersFileContents | Convertto-Json | out-file "parameters/$($parametersFile)"
-        try {
-            $parametersFileContents | Convertto-Json | out-file "parameters/$($parametersFile)"
-            Write-Host "     ✓ Changes to ARM template parameters file 'parameters/$($parametersFile)' written" -ForegroundColor Magenta
-        }
-        catch {
-            Write-Host "     ✘ There was a problem writing file" -ForegroundColor Red
-        }
+            Write-Host ""
+            Write-Host "┏━━━" -ForegroundColor Yellow
+            Write-Host "┃ Investigating workspace $($workspace.Name)" -ForegroundColor Yellow
+            Write-Host "┗━━━" -ForegroundColor Yellow
+            $changeRequired = $false
+
+            # Retrieve current Log Analytics Sku
+            if ($workspace.Sku -eq "free") {
+                $currentSku = "Free"
+            } else {
+                if ($workspace.Sku -eq "PerGB2018") {
+                    $currentSku = "PerGB2018"
+                }
+                else {
+                    $currentSku = $workspace.CapacityReservationLevel
+                }
+            }
+            
+            # Query for average daily date ingest
+            Write-Host "  ┖─ Querying for average daily data ingest..." -ForegroundColor Gray
+            $queryResults = Invoke-AzOperationalInsightsQuery -WorkspaceId $workspace.CustomerId -Query $DailyAvgIngestQuery -Wait 120 | Select-Object Results
+            $avgDailyIngest = ($queryResults.Results | Select-Object -ExpandProperty "GBs/day")
+            if ($avgDailyIngest -eq "NaN") {
+                # In case KQL gave no results, the daily data ingest = zero
+                $avgDailyIngest = 0
+            }
         
-        # Write Github variables for next step(s)
-        "fileChanges=true" >> $env:GITHUB_OUTPUT
-        "filePath=parameters/$parameterFile" >> $env:GITHUB_OUTPUT
+            # Compare the daily data ingest with the values of the pricing hash table defined above
+            $loganalyticsAllRecommendations = $logAnalyticsPriceTable.GetEnumerator() | Where-Object { $_.Value -le $avgDailyIngest }
+        
+            # Next, we want to show only the pricing tier with the highest amount of data/day aplicable
+            if ($currentSku -eq "Free") {
+                $optimalSku = "Free"
+            } else {
+                $getSku = $loganalyticsAllRecommendations | Where-Object { $_.Value -eq (($loganalyticsAllRecommendations | measure-object -Property Value -maximum).maximum) } | Select-Object -ExpandProperty Name
+                if ($getSku -eq 'PerGB2018') {
+                    # Check if Sku = string
+                    $optimalSku = $getSku
+                }
+                else {
+                    $optimalSku = [int]$getSku      # Otherwise it's an integer
+                }
+            }
+        
+            # Check is Sentinel solution is enabled on the log analytics workspace
+            Write-Host "  ┖─ Check if workspace is Sentinel enabled..." -ForegroundColor Gray
+            $checkSentinelEnabled = Get-AzMonitorLogAnalyticsSolution | Where-Object { $_.Name -eq "SecurityInsights($($workspace.Name))" }
+            Write-Host "  ┖─ Gathering Log Analytics pricing tier recommendations..." -ForegroundColor Gray
+            If (($checkSentinelEnabled | Measure-Object).Count -eq 0) {
+                $sentinelEnabled = $false
+                # Then also no Sentinel pricing tier is aplicable
+                $optimalSentinelSku = "N/A"
+                $currentSentinelSku = "N/A"
+            }
+            else {
+                $sentinelEnabled = $true
+                # Retrieve current Sentinel SKU
+                $context = Get-AzContext
+                $profileClient = [Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient]::new([Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile)
+                $token = $profileClient.AcquireAccessToken($context.Subscription.TenantId)
+                $headers = @{
+                    "Authorization" = "Bearer $($token.AccessToken)"
+                    "Content-Type"  = "application/json"
+                }
+                Write-Host "  ┖─ Retrieve Sentinal SKU..." -ForegroundColor Gray
+                $params = @{
+                    "Method"  = "Get"
+                    "Uri"     = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$($workspace.ResourceGroupName)/providers/Microsoft.OperationsManagement/solutions/SecurityInsights($($workspace.Name))?api-version=2015-11-01-preview"
+                    "Headers" = $headers
+                }
+                $sentinelProperties = Invoke-RestMethod @params -UseBasicParsing
+                if ($sentinelProperties.properties.sku.name -eq "perGB") {
+                    $currentSentinelSku = "perGB"
+                }
+                else {
+                    $currentSentinelSku = [int]$sentinelProperties.properties.sku.capacityReservationLevel
+                }
+                Write-Host "  ┖─ Gathering Sentinel pricing tier recommendations..." -ForegroundColor Gray
+                # Compare the daily data ingest with the values of the pricing hash table defined above
+                $sentinelAllRecommendations = $sentinelPriceTable.GetEnumerator() | Where-Object { $_.Value -le $avgDailyIngest }
+                # Next, we want to show only the pricing tier with the highest amount of data/day aplicable
+                $getSentinelSku = $sentinelAllRecommendations | Where-Object { $_.Value -eq (($sentinelAllRecommendations | measure-object -Property Value -maximum).maximum) } | Select-Object -ExpandProperty Name
+                if ($getSentinelSku -eq 'perGB') {
+                    # Check if Sku = string
+                    $optimalSentinelSku = $getSentinelSku
+                }
+                else {
+                    $optimalSentinelSku = [int]$getSentinelSku      # Otherwise it's an integer
+                }
+            }
+
+            # Check data beyond free retention
+            Write-Host "  ┖─ Checking data retention ..." -ForegroundColor Gray
+            If ($sentinelEnabled -eq $false) {
+                Write-Host "     Data older than free retention (30d) ?..." -ForegroundColor DarkGray
+                $queryResults = Invoke-AzOperationalInsightsQuery -WorkspaceId $workspace.CustomerId -Query $LogAnalyticsRetentionQuery -Wait 120 | Select-Object Results
+                $billedRetentionGB = ($queryResults.Results | Select-Object -ExpandProperty "PayedRetentionGB")
+            }
+            If ($sentinelEnabled -eq $true) {
+                Write-Host "     Data older than free retention (90d) ?..." -ForegroundColor DarkGray
+                $queryResults = Invoke-AzOperationalInsightsQuery -WorkspaceId $workspace.CustomerId -Query $SentinelRetentionQuery -Wait 120 | Select-Object Results
+                $billedRetentionGB = ($queryResults.Results | Select-Object -ExpandProperty "PayedRetentionGB")
+            }
+            # Construct new hash table with information about this workspace
+            $listworkspace = New-Object PSObject -property @{
+                workspaceName      = $workspace.Name;
+                SubscriptionName   = $subscription.Name;
+                sentinelEnabled    = $sentinelEnabled;
+                retentionInDays    = $workspace.retentionInDays;
+                averageDailyIngest = $avgDailyIngest;
+                currentSku         = $currentSku;
+                optimalSku         = $optimalSku;
+                currentSentinelSku = $currentSentinelSku;
+                optimalSentinelSku = $optimalSentinelSku;
+                billedRetentionGB  = $billedRetentionGB
+            }
+            # Add hash table to already existing object with all the other workspaces
+            $sentinelWorkspaces += $listworkspace
+
+            # Compare Current Sku's with optimal Sku's
+            Write-Host "  ┖─ Checking if Sku's needs changing..." -ForegroundColor Gray
+            if($currentSku -eq 'Free') {
+                Write-Host "     ✓ Log Analytics Sku is not applicable since it's running the 'free' tier" -ForegroundColor Green
+            } else {
+                if ($currentSku.Equals($optimalSku)) {
+                    Write-Host "     ✓ Log Analytics Sku is currently running optimal Sku" -ForegroundColor Green
+                }
+                else {
+                    Write-Host "     ! Log Analytics Sku needs to be changed from $($currentSku) to $($optimalSku)" -ForegroundColor DarkYellow
+                    $changeRequired = $true
+                }
+            }
+            
+            if ($currentSentinelSku -ne 'N/A') {
+                if ($currentSentinelSku.Equals($optimalSentinelSku)) {
+                    Write-Host "     ✓ Microsoft Sentinel Sku is currently running optimal Sku" -ForegroundColor Green
+                }
+                else {
+                    Write-Host "     ! Microsoft Sentinel Sku needs to be changed from $($currentSentinelSku) to $($optimalSentinelSku)" -ForegroundColor DarkYellow
+                    $changeRequired = $true
+                }
+            }
+
+            If ($updateArmParameters) {
+                # Make adjustments to ARM template parameters file
+                if ($changeRequired) {
+                    # Read ARM template parameters file
+                    $parametersFile = (Get-ChildItem "parameters" | where-object name -match $listworkspace.workspaceName).Name
+                    $parametersFileContents = get-content "parameters/$($parametersFile)" | ConvertFrom-Json
+
+                    # Change Log Analytics parameters values to match optimal Sku
+                    If ($optimalSku -eq "PerGB2018") {
+                        $parametersFileContents.parameters.pricingTierLogAnalytics.value = "PerGB2018"
+                        $parametersFileContents.parameters.capacityReservationLevelLogAnalytics.value = 100
+                    }
+                    else {
+                        $parametersFileContents.parameters.pricingTierLogAnalytics.value = "CapacityReservation"
+                        $parametersFileContents.parameters.capacityReservationLevelLogAnalytics.value = $optimalSku
+                    }
+
+                    # Change Sentinel parameters values to match optimal Sku
+                    If ($optimalSentinelSku -eq "perGB") {
+                        $parametersFileContents.parameters.pricingTierSentinel.value = $false
+                        $parametersFileContents.parameters.capacityReservationLevelSentinel.value = 100
+                    }
+                    else {
+                        $parametersFileContents.parameters.pricingTierSentinel.value = $true
+                        $parametersFileContents.parameters.capacityReservationLevelSentinel.value = $optimalSentinelSku
+                    }
+                
+                    # Write changes to ARM template parameters file
+                    Write-Host "  ┖─ Writing ARM template parameters file to disk..." -ForegroundColor Gray
+                    $parametersFileContents | Convertto-Json | out-file "parameters/$($parametersFile)"
+                    try {
+                        $parametersFileContents | Convertto-Json | out-file "parameters/$($parametersFile)"
+                        Write-Host "     ✓ Changes to ARM template parameters file 'parameters/$($parametersFile)' written" -ForegroundColor Magenta
+                    }
+                    catch {
+                        Write-Host "     ✘ There was a problem writing file" -ForegroundColor Red
+                    }
+                
+                    # Write Github variables for next step(s)
+                    "fileChanges=true" >> $env:GITHUB_OUTPUT
+                    "filePath=parameters/$parameterFile" >> $env:GITHUB_OUTPUT
+                }
+            }
+        }
     }
 
+    $Count++
+    
 }
 
 # Output all findings
 
-Write-Host ""
-Write-Host ""
-Write-Host "┏━━━" -ForegroundColor Green
-Write-Host "┃ The following (Sentinel) workspace(s) were found:" -ForegroundColor Green
-Write-Host "┗━━━" -ForegroundColor Green
-$sentinelWorkspaces | Select-Object -Last 20 | Format-Table workspaceName, SubscriptionName, sentinelEnabled, retentionInDays, averageDailyIngest, currentSku, optimalSku, currentSentinelSku, optimalSentinelSku, billedRetentionGB
-# Notify is list is shortened
-If (($sentinelWorkspaces | Measure-Object).Count -gt 20) {
-    Write-Host "More than 20 workspaces found, output is truncated!" -ForegroundColor Red
-}
+    Write-Host ""
+    Write-Host ""
+    Write-Host "┏━━━" -ForegroundColor Green
+    Write-Host "┃ The following (Sentinel) workspace(s) were found:" -ForegroundColor Green
+    Write-Host "┗━━━" -ForegroundColor Green
+    $sentinelWorkspaces | Select-Object -Last 20 | Format-Table workspaceName, SubscriptionName, sentinelEnabled, retentionInDays, averageDailyIngest, currentSku, optimalSku, currentSentinelSku, optimalSentinelSku, billedRetentionGB
+    # Notify is list is shortened
+    If (($sentinelWorkspaces | Measure-Object).Count -gt 20) {
+        Write-Host "More than 20 workspaces found, output is truncated!" -ForegroundColor Red
+    }
