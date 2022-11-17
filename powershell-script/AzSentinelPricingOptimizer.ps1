@@ -321,8 +321,8 @@ foreach($subscription in $subscriptions) {
                 # Make adjustments to ARM template parameters file
                 if ($changeRequired) {
                     # Read ARM template parameters file
-                    $parametersFile = (Get-ChildItem "parameters" | where-object name -match $listworkspace.workspaceName).Name
-                    $parametersFileContents = get-content "parameters/$($parametersFile)" | ConvertFrom-Json
+                    $parametersFile = (Get-ChildItem $parametersFilePath | where-object name -match $listworkspace.workspaceName).Name
+                    $parametersFileContents = Get-Content $parametersFile | ConvertFrom-Json
 
                     # Change Log Analytics parameters values to match optimal Sku
                     If ($optimalSku -eq "PerGB2018") {
@@ -346,10 +346,9 @@ foreach($subscription in $subscriptions) {
                 
                     # Write changes to ARM template parameters file
                     Write-Host "  ┖─ Writing ARM template parameters file to disk..." -ForegroundColor Gray
-                    $parametersFileContents | Convertto-Json | out-file "parameters/$($parametersFile)"
                     try {
-                        $parametersFileContents | Convertto-Json | out-file "parameters/$($parametersFile)"
-                        Write-Host "     ✓ Changes to ARM template parameters file 'parameters/$($parametersFile)' written" -ForegroundColor Magenta
+                        $parametersFileContents | Convertto-Json | out-file $parametersFile
+                        Write-Host "     ✓ Changes to ARM template parameters file '$($parametersFile)' written" -ForegroundColor Magenta
                     }
                     catch {
                         Write-Host "     ✘ There was a problem writing file" -ForegroundColor Red
@@ -357,7 +356,7 @@ foreach($subscription in $subscriptions) {
                 
                     # Write Github variables for next step(s)
                     "fileChanges=true" >> $env:GITHUB_OUTPUT
-                    "filePath=parameters/$parameterFile" >> $env:GITHUB_OUTPUT
+                    "filePath=$parameterFile" >> $env:GITHUB_OUTPUT
                 }
             }
         }
