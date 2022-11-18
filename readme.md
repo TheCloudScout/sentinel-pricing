@@ -6,7 +6,7 @@
 I wrote two articles about this subject on Medium. Check it out for more background information about this repository:
 
 Story from Febuary 2022
-https://medium.com/wortell/optimize-microsoft-sentinel-pricing-ca9901840b75
+<https://medium.com/@koosg/optimize-microsoft-sentinel-pricing-ca9901840b75>
 
 Story from November 2022
 <https://medium.com/@koosg/auto-scale-your-sentinel-pricing-tiers-3d1f46b4c6ce>
