@@ -28,7 +28,7 @@ param (
     [String] $subscriptionId = "",
 
     [Parameter (Mandatory = $false)]
-    [String] $updateArmParameters = $false,
+    [Boolean] $updateArmParameters = $false,
 
     [Parameter (Mandatory = $false)]
     [String] $parametersFilePath = ""
