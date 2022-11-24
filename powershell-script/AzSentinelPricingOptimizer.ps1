@@ -28,12 +28,15 @@ param (
     [String] $subscriptionId = "",
 
     [Parameter (Mandatory = $false)]
-    [String] $updateArmParameters = $false,
+    [bool] $updateArmParameters = $false,
 
     [Parameter (Mandatory = $false)]
     [String] $parametersFilePath = ""
 
 )
+
+# Set required verison
+#Requires -PSEdition Core
 
 Clear-Host
 
