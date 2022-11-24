@@ -227,8 +227,7 @@ foreach($subscription in $subscriptions) {
                 if ($getSku -eq 'PerGB2018') {
                     # Check if Sku = string
                     $optimalSku = $getSku
-                }
-                else {
+                } else {
                     $optimalSku = [int]$getSku      # Otherwise it's an integer
                 }
             }
@@ -310,26 +309,35 @@ foreach($subscription in $subscriptions) {
 
             # Compare Current Sku's with optimal Sku's
             Write-Host "  ┖─ Checking if Sku's needs changing..." -ForegroundColor Gray
-            if($currentSku -eq 'Free') {
-                Write-Host "     ✓ Log Analytics Sku is not applicable since it's running the 'free' tier" -ForegroundColor Green
+            if (($null -eq $currentSku) -or ($null -eq $optimalSku))   {
+                Write-Host '     One of values for "$currentSku" or "$optimalSku" is "$null". Cannot continue comparison, check values in end result.' -ForegroundColor Red
             } else {
-                if ($currentSku.Equals($optimalSku)) {
-                    Write-Host "     ✓ Log Analytics Sku is currently running optimal Sku" -ForegroundColor Green
+                if ($currentSku -eq 'Free') {
+                    Write-Host "     ✓ Log Analytics Sku is not applicable since it's running the 'free' tier" -ForegroundColor Green
                 }
                 else {
-                    Write-Host "     ! Log Analytics Sku needs to be changed from $($currentSku) to $($optimalSku)" -ForegroundColor DarkYellow
-                    $changeRequired = $true
+                    if ($currentSku.Equals($optimalSku)) {
+                        Write-Host "     ✓ Log Analytics Sku is currently running optimal Sku" -ForegroundColor Green
+                    }
+                    else {
+                        Write-Host "     ! Log Analytics Sku needs to be changed from $($currentSku) to $($optimalSku)" -ForegroundColor DarkYellow
+                        $changeRequired = $true
+                    }
                 }
             }
-            
-            if ($currentSentinelSku -ne 'N/A') {
-                if ($currentSentinelSku.Equals($optimalSentinelSku)) {
-                    Write-Host "     ✓ Microsoft Sentinel Sku is currently running optimal Sku" -ForegroundColor Green
-                }
-                else {
-                    Write-Host "     ! Microsoft Sentinel Sku needs to be changed from $($currentSentinelSku) to $($optimalSentinelSku)" -ForegroundColor DarkYellow
-                    $changeRequired = $true
-                }
+
+            if (($null -eq $currentSentinelSku) -or ($null -eq $optimalSentinelSku))   {
+                Write-Host '     One of values for "$currentSentinelSku" or "$optimalSentinelSku" is "$null". Cannot continue comparison, check values in end result.' -ForegroundColor Red
+            } else {
+                if ($currentSentinelSku -ne 'N/A') {
+                    if ($currentSentinelSku.Equals($optimalSentinelSku)) {
+                        Write-Host "     ✓ Microsoft Sentinel Sku is currently running optimal Sku" -ForegroundColor Green
+                    }
+                    else {
+                        Write-Host "     ! Microsoft Sentinel Sku needs to be changed from $($currentSentinelSku) to $($optimalSentinelSku)" -ForegroundColor DarkYellow
+                        $changeRequired = $true
+                    }
+                }            
             }
 
             If ($updateArmParameters) {
