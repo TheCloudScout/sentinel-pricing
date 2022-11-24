@@ -126,7 +126,7 @@ if ($updateArmParameters) {
 # Bases on prices for West Europe region https://azure.microsoft.com/en-us/pricing/details/microsoft-sentinel/
 
     $sentinelPriceTable = @{
-        'perGB'     = [int]    0;
+        'PerGB'     = [int]    0;
         '100'       = [int]   50; 
         '200'       = [int]  179;
         '300'       = [int]  290;
@@ -260,8 +260,8 @@ foreach($subscription in $subscriptions) {
                     "Headers" = $headers
                 }
                 $sentinelProperties = Invoke-RestMethod @params -UseBasicParsing
-                if ($sentinelProperties.properties.sku.name -eq "perGB") {
-                    $currentSentinelSku = "perGB"
+                if ($sentinelProperties.properties.sku.name -eq "PerGB") {
+                    $currentSentinelSku = "PerGB"
                 }
                 else {
                     $currentSentinelSku = [int]$sentinelProperties.properties.sku.capacityReservationLevel
@@ -271,7 +271,7 @@ foreach($subscription in $subscriptions) {
                 $sentinelAllRecommendations = $sentinelPriceTable.GetEnumerator() | Where-Object { $_.Value -le $avgDailyIngest }
                 # Next, we want to show only the pricing tier with the highest amount of data/day aplicable
                 $getSentinelSku = $sentinelAllRecommendations | Where-Object { $_.Value -eq (($sentinelAllRecommendations | measure-object -Property Value -maximum).maximum) } | Select-Object -ExpandProperty Name
-                if ($getSentinelSku -eq 'perGB') {
+                if ($getSentinelSku -eq 'PerGB') {
                     # Check if Sku = string
                     $optimalSentinelSku = $getSentinelSku
                 }
