@@ -227,7 +227,10 @@ foreach($subscription in $subscriptions) {
                 $optimalSku = "Free"
             } else {
                 $getSku = $loganalyticsAllRecommendations | Where-Object { $_.Value -eq (($loganalyticsAllRecommendations | measure-object -Property Value -maximum).maximum) } | Select-Object -ExpandProperty Name
-                if ($getSku -eq 'PerGB2018') {
+                if (($getSku -eq 'PerGB2018') -and ($currentSku -eq 'Standalone')) {
+                    # Standalone is cheaper then PerGB2018
+                    $optimalSku = $currentSku
+                } elseif ($getSku -eq 'PerGB2018') {
                     # Check if Sku = string
                     $optimalSku = $getSku
                 } else {
