@@ -202,6 +202,9 @@ foreach($subscription in $subscriptions) {
                 if ($workspace.Sku -eq "PerGB2018") {
                     $currentSku = "PerGB2018"
                 }
+                elseif ($workspace.Sku -eq "standalone") {
+                    $currentSku = "Standalone"
+                }
                 else {
                     $currentSku = $workspace.CapacityReservationLevel
                 }
