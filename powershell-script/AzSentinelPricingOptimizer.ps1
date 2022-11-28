@@ -258,7 +258,7 @@ foreach($subscription in $subscriptions) {
                     "Authorization" = "Bearer $($token.AccessToken)"
                     "Content-Type"  = "application/json"
                 }
-                Write-Host "  ┖─ Retrieve Sentinal SKU..." -ForegroundColor Gray
+                Write-Host "  ┖─ Retrieve Sentinel SKU..." -ForegroundColor Gray
                 $params = @{
                     "Method"  = "Get"
                     "Uri"     = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$($workspace.ResourceGroupName)/providers/Microsoft.OperationsManagement/solutions/SecurityInsights($($workspace.Name))?api-version=2015-11-01-preview"
