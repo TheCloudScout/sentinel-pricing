@@ -89,15 +89,21 @@ if ($updateArmParameters) {
     )
     Write-Host "Installing/Importing PowerShell modules..." -ForegroundColor DarkGray
     $modulesToInstall | ForEach-Object {
-        if (-not (Get-Module -ListAvailable -All $_)) {
-            Write-Host "Module [$_] not found, installing..." -ForegroundColor DarkGray
+        if (-not (Get-Module -ListAvailable $_)) {
+            Write-Host "  ┖─ Module [$_] not found, installing..." -ForegroundColor DarkGray
             Install-Module $_ -Force
+        } else {
+            Write-Host "  ┖─ Module [$_] already installed." -ForegroundColor DarkGray
         }
     }
 
     $modulesToInstall | ForEach-Object {
-        Write-Host "Importing Module [$_]" -ForegroundColor DarkGray
-        Import-Module $_ -Force
+        if (-not (Get-InstalledModule $_)) {
+            Write-Host "  ┖─ Module [$_] not loaded, importing..." -ForegroundColor DarkGray
+            Import-Module $_ -Force
+        } else {
+            Write-Host "  ┖─ Module [$_] already loaded." -ForegroundColor DarkGray
+        }
     }
 
 # (Re-)setting Variables
