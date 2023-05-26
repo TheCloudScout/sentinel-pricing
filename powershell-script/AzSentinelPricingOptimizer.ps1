@@ -120,7 +120,7 @@ if ($updateArmParameters) {
     $logAnalyticsPriceTable = @{
         'PerGB2018' = [int]    0;
         '100'       = [int]   85; 
-        '200'       = [int]  193;
+        '200'       = [int]  188;
         '300'       = [int]  293;
         '400'       = [int]  391;
         '500'       = [int]  491;
@@ -134,11 +134,11 @@ if ($updateArmParameters) {
     $sentinelPriceTable = @{
         'PerGB'     = [int]    0;
         '100'       = [int]   50; 
-        '200'       = [int]  179;
-        '300'       = [int]  290;
-        '400'       = [int]  384;
+        '200'       = [int]  180;
+        '300'       = [int]  289;
+        '400'       = [int]  385;
         '500'       = [int]  480;
-        '1000'      = [int]  974;
+        '1000'      = [int]  975;
         '2000'      = [int] 1897;
         '5000'      = [int] 4730
     }
