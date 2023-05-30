@@ -150,7 +150,7 @@ $DailyAvgIngestQuery = @'
     | where TimeGenerated > ago(31d) and TimeGenerated < ago(1d)
     // Only look at chargeable Tables
     | where IsBillable == True
-    | summarize TotalGBytes =round(sum(Quantity/(1024)),2) by bin(TimeGenerated, 1d)
+    | summarize TotalGBytes =round(sum(Quantity/(1000)),2) by bin(TimeGenerated, 1d)
     | summarize ['GBs/day'] =round(avg(TotalGBytes),2)
 '@
 
@@ -160,7 +160,7 @@ $LogAnalyticsRetentionQuery = @'
     | where TimeGenerated < ago(30d)
     // Only look at chargeable Tables
     | where IsBillable == true
-    | summarize PayedRetentionGB = round(sum(Quantity) / 1024 , 0)
+    | summarize PayedRetentionGB = round(sum(Quantity) / 1000 , 0)
 '@
 
 $SentinelRetentionQuery = @'
@@ -169,7 +169,7 @@ $SentinelRetentionQuery = @'
     | where TimeGenerated < ago(90d)
     // Only look at chargeable Tables
     | where IsBillable == true
-    | summarize PayedRetentionGB = round(sum(Quantity) / 1024 , 0)
+    | summarize PayedRetentionGB = round(sum(Quantity) / 1000 , 0)
 '@
 
 if(!$subscriptionId){
